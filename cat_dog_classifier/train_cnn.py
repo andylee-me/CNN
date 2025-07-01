@@ -1,13 +1,7 @@
-import os  # ✅ 一定要有這行！
-import tensorflow as tf
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import layers, models
+import os
+import pandas as pd
 
-
-
-# 修正使用者提供的程式碼：整合模型訓練與模型儲存邏輯進入 train_cnn.py 檔案中，避免 NameError
-
-# train_cnn.py 的內容（乾淨版本，已修正所有問題）
+# train_cnn.py 的內容
 train_cnn_code = '''import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -70,7 +64,7 @@ os.makedirs("file/model", exist_ok=True)
 model.save("model/catdog_model.h5")
 '''
 
-# environment.yml（增加 pandas）
+# environment.yml 內容
 environment_yml = '''name: catdog-env
 channels:
   - defaults
@@ -91,9 +85,10 @@ with open("file/cat_dog_classifier/train_cnn.py", "w", encoding="utf-8") as f:
 with open("file/environment.yml", "w", encoding="utf-8") as f:
     f.write(environment_yml)
 
-# 顯示建立的檔案列表
-import pandas as pd
+# 建立檔案列表 DataFrame
 df = pd.DataFrame([
     {"檔案": "train_cnn.py", "路徑": "file/cat_dog_classifier/train_cnn.py"},
     {"檔案": "environment.yml", "路徑": "file/environment.yml"},
 ])
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="建立的檔案列表", dataframe=df)
