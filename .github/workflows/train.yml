@@ -17,7 +17,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          environment-file: environment.yml
+          environment-file: cat_dog_classifier/environment.yml
           activate-environment: catdog-env
 
       - name: Install gdown
@@ -32,12 +32,10 @@ jobs:
 
       - name: Train CNN Model
         shell: bash -l {0}
-        run: |
-          python cat_dog_classifier/train_cnn.py
+        run: python cat_dog_classifier/train_cnn.py
 
       - name: Upload trained model artifact
         uses: actions/upload-artifact@v4
         with:
           name: catdog-model
           path: file/model/catdog_model.h5
-
