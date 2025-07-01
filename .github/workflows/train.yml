@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: catdog-model
-          path: file/model/catdog_model.h5
+          path: catdog_model.h5
