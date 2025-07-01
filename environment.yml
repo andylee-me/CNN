@@ -8,3 +8,4 @@ dependencies:
     - tensorflow
     - matplotlib
     - numpy
+    - pandas
