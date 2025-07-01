@@ -20,13 +20,13 @@ jobs:
           environment-file: environment.yml
           activate-environment: catdog-env
 
-      - name: List conda environments (debug)
-        run: conda env list
       - name: Install gdown
         run: pip install gdown
+
       - name: Download dataset from Google Drive
-        run: gdown --id 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
-      
+        run: |
+          gdown 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
+
       - name: Unzip dataset
         run: unzip dataset.zip -d file/
 
@@ -34,3 +34,4 @@ jobs:
         shell: bash -l {0}
         run: |
           python cat_dog_classifier/train_cnn.py
+
