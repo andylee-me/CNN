@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # train_cnn.py 的內容
-train_cnn_code = '''import os
+train_cnn_code = import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
@@ -59,10 +59,20 @@ model.fit(
     validation_data=val_gen
 )
 
-# 儲存模型
-os.makedirs("model", exist_ok=True)
-model.save("model/catdog_model.h5")
-'''
+# 在您的訓練腳本中，確保模型保存路徑正確
+import os
+
+# 創建目錄（如果不存在）
+os.makedirs('model', exist_ok=True)
+
+# 保存模型
+model.save('model/catdog_model.h5')
+
+# 驗證文件是否存在
+if os.path.exists('model/catdog_model.h5'):
+    print("Model saved successfully!")
+else:
+    print("Model save failed!")
 
 # environment.yml 內容
 environment_yml = '''name: catdog-env
