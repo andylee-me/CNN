@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # train_cnn.py 的內容
-train_cnn_code = import os
+import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
@@ -74,19 +74,7 @@ if os.path.exists('model/catdog_model.h5'):
 else:
     print("Model save failed!")
 
-# environment.yml 內容
-environment_yml = '''name: catdog-env
-channels:
-  - defaults
-dependencies:
-  - python=3.10
-  - pip
-  - pip:
-      - tensorflow
-      - matplotlib
-      - numpy
-      - pandas
-'''
+
 
 # 儲存到檔案系統
 os.makedirs("file/cat_dog_classifier", exist_ok=True)
