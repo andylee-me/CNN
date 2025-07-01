@@ -91,4 +91,3 @@ df = pd.DataFrame([
     {"檔案": "environment.yml", "路徑": "file/environment.yml"},
 ])
 
-import ace_tools as tools; tools.display_dataframe_to_user(name="建立的檔案列表", dataframe=df)
