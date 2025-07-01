@@ -74,14 +74,15 @@ dependencies:
     }
 }
 
-# 寫入檔案到指定路徑
-base_path = "/mnt/data"
+base_path = "file"  # 改成相對目錄
 for folder, files in project_structure.items():
     folder_path = os.path.join(base_path, folder)
     os.makedirs(folder_path, exist_ok=True)
     for filename, content in files.items():
-        with open(os.path.join(folder_path, filename), "w") as f:
+        file_path = os.path.join(folder_path, filename)
+        with open(file_path, "w") as f:
             f.write(content)
+
 
 # 顯示結果目錄
 import pandas as pd
