@@ -1,5 +1,3 @@
-# 重新生成 YAML 格式完全符合規範的 environment.yml
-correct_environment_yml = """\
 name: catdog-env
 channels:
   - defaults
@@ -10,10 +8,3 @@ dependencies:
     - tensorflow
     - matplotlib
     - numpy
-"""
-
-file_path = "/mnt/data/environment.yml"
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write(correct_environment_yml)
-
-file_path
