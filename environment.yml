@@ -1,19 +1,19 @@
-# 使用 triple-quoted string 時應避免留在末尾未關閉，這裡直接改為單行字串拼接確保結尾正確
-environment_yml_lines = [
-    "name: catdog-env",
-    "channels:",
-    "  - defaults",
-    "dependencies:",
-    "  - python=3.10",
-    "  - pip",
-    "  - pip:",
-    "      - tensorflow",
-    "      - matplotlib",
-    "      - numpy"
-]
+# 重新生成 YAML 格式完全符合規範的 environment.yml
+correct_environment_yml = """\
+name: catdog-env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - tensorflow
+    - matplotlib
+    - numpy
+"""
 
 file_path = "/mnt/data/environment.yml"
-with open(file_path, "w") as f:
-    f.write("\n".join(environment_yml_lines))
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(correct_environment_yml)
 
 file_path
