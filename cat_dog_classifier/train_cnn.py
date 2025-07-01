@@ -67,7 +67,7 @@ model.fit(
 
 # 儲存模型
 os.makedirs("file/model", exist_ok=True)
-model.save("catdog_model.h5")
+model.save("model/catdog_model.h5")
 '''
 
 # environment.yml（增加 pandas）
