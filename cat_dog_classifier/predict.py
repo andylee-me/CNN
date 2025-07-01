@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # 圖片路徑與參數
-val_dir = 'cat_dog_classifier/kaggle_cats_vs_dogs_f/val'
+val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 img_size = (128, 128)
 batch_size = 32
 
