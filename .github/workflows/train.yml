@@ -35,3 +35,9 @@ jobs:
         run: |
           python cat_dog_classifier/train_cnn.py
 
+      - name: Upload trained model artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: catdog-model
+          path: file/model/catdog_model.h5
+
