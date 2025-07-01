@@ -93,3 +93,5 @@ for folder, files in project_structure.items():
         file_list.append({"檔案": filename, "路徑": os.path.join(folder, filename)})
 
 df = pd.DataFrame(file_list)
+# 儲存模型
+model.save("file/model/catdog_model.h5")
