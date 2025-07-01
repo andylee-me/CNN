@@ -78,10 +78,6 @@ else:
 
 # 儲存到檔案系統
 os.makedirs("file/cat_dog_classifier", exist_ok=True)
-with open("file/cat_dog_classifier/train_cnn.py", "w", encoding="utf-8") as f:
-    f.write(train_cnn_code)
-with open("file/environment.yml", "w", encoding="utf-8") as f:
-    f.write(environment_yml)
 
 # 建立檔案列表 DataFrame
 df = pd.DataFrame([
