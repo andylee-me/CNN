@@ -1,16 +1,14 @@
-import os
+# 修正使用者提供的程式碼：整合模型訓練與模型儲存邏輯進入 train_cnn.py 檔案中，避免 NameError
 
-# 建立基本專案結構與必要檔案內容
-project_structure = {
-    "cat_dog_classifier/": {
-        "train_cnn.py": '''import os
+# train_cnn.py 的內容（乾淨版本，已修正所有問題）
+train_cnn_code = '''import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
 
 # 資料夾路徑
-train_dir = 'kaggle_cats_vs_dogs_f/train'
-val_dir = 'kaggle_cats_vs_dogs_f/val'
+train_dir = 'file/kaggle_cats_vs_dogs_f/train'
+val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 
 # 圖像參數
 img_size = (128, 128)
@@ -59,54 +57,37 @@ model.fit(
     epochs=10,
     validation_data=val_gen
 )
-''',
-        "environment.yml": '''name: catdog-env
+
+# 儲存模型
+os.makedirs("file/model", exist_ok=True)
+model.save("file/model/catdog_model.h5")
+'''
+
+# environment.yml（增加 pandas）
+environment_yml = '''name: catdog-env
 channels:
   - defaults
 dependencies:
   - python=3.10
   - pip
   - pip:
-    - tensorflow
-    - matplotlib
-    - numpy
+      - tensorflow
+      - matplotlib
+      - numpy
+      - pandas
 '''
-    }
-}
 
-base_path = "file"  # 改成相對目錄
-for folder, files in project_structure.items():
-    folder_path = os.path.join(base_path, folder)
-    os.makedirs(folder_path, exist_ok=True)
-    for filename, content in files.items():
-        file_path = os.path.join(folder_path, filename)
-        with open(file_path, "w") as f:
-            f.write(content)
+# 儲存到檔案系統
+os.makedirs("file/cat_dog_classifier", exist_ok=True)
+with open("file/cat_dog_classifier/train_cnn.py", "w", encoding="utf-8") as f:
+    f.write(train_cnn_code)
+with open("file/environment.yml", "w", encoding="utf-8") as f:
+    f.write(environment_yml)
 
-
-# 顯示結果目錄
+# 顯示建立的檔案列表
 import pandas as pd
-
-file_list = []
-for folder, files in project_structure.items():
-    for filename in files:
-        file_list.append({"檔案": filename, "路徑": os.path.join(folder, filename)})
-
-df = pd.DataFrame(file_list)
-
-
-
-# 訓練模型
-model.fit(
-    train_gen,
-    epochs=10,
-    validation_data=val_gen
-)
-
-# 建立儲存資料夾（使用合法路徑）
-import os
-os.makedirs("file/model", exist_ok=True)
-
-# 儲存模型
-model.save("file/model/catdog_model.h5")
-
+df = pd.DataFrame([
+    {"檔案": "train_cnn.py", "路徑": "file/cat_dog_classifier/train_cnn.py"},
+    {"檔案": "environment.yml", "路徑": "file/environment.yml"},
+])
+import ace_tools as tools; tools.display_dataframe_to_user(name="已修正檔案", dataframe=df)
