@@ -86,7 +86,6 @@ for folder, files in project_structure.items():
 
 # 顯示結果目錄
 import pandas as pd
-import ace_tools as tools
 
 file_list = []
 for folder, files in project_structure.items():
@@ -94,4 +93,3 @@ for folder, files in project_structure.items():
         file_list.append({"檔案": filename, "路徑": os.path.join(folder, filename)})
 
 df = pd.DataFrame(file_list)
-tools.display_dataframe_to_user(name="已生成的檔案", dataframe=df)
