@@ -6,9 +6,9 @@ dependencies:
   - python=3.10
   - pip
   - pip:
-    - tensorflow
-    - matplotlib
-    - numpy
+      - tensorflow
+      - matplotlib
+      - numpy
 '''
 
 # 儲存檔案
