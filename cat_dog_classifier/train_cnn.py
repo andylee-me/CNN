@@ -60,7 +60,7 @@ model.fit(
 )
 
 # 儲存模型
-os.makedirs("file/model", exist_ok=True)
+os.makedirs("model", exist_ok=True)
 model.save("model/catdog_model.h5")
 '''
 
