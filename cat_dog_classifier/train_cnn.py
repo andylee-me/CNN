@@ -1,3 +1,10 @@
+import os  # ✅ 一定要有這行！
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+
+
+
 # 修正使用者提供的程式碼：整合模型訓練與模型儲存邏輯進入 train_cnn.py 檔案中，避免 NameError
 
 # train_cnn.py 的內容（乾淨版本，已修正所有問題）
