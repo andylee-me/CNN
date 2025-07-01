@@ -39,3 +39,7 @@ jobs:
         with:
           name: catdog-model
           path: model/catdog_model.h5
+  
+      - name: Evaluate model
+        shell: bash -l {0}
+        run: python cat_dog_classifier/predict.py
