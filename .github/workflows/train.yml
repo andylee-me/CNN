@@ -22,6 +22,13 @@ jobs:
 
       - name: List conda environments (debug)
         run: conda env list
+      - name: Install gdown
+        run: pip install gdown
+      - name: Download dataset from Google Drive
+        run: gdown --id 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
+      
+      - name: Unzip dataset
+        run: unzip dataset.zip -d file/
 
       - name: Train CNN Model
         shell: bash -l {0}
