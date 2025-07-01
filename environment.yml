@@ -1,5 +1,5 @@
-# 重新生成 environment.yml 內容
-environment_yml_content = name: catdog-env
+# 重新生成乾淨正確的 environment.yml 內容
+correct_environment_yml = """name: catdog-env
 channels:
   - defaults
 dependencies:
@@ -9,11 +9,10 @@ dependencies:
       - tensorflow
       - matplotlib
       - numpy
+"""
 
-
-# 儲存檔案
 file_path = "/mnt/data/environment.yml"
 with open(file_path, "w") as f:
-    f.write(environment_yml_content)
+    f.write(correct_environment_yml)
 
 file_path
