@@ -33,4 +33,4 @@ jobs:
       - name: Train CNN Model
         shell: bash -l {0}
         run: |
-          python main.py
+          python cat_dog_classifier/main.py
