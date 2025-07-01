@@ -93,5 +93,20 @@ for folder, files in project_structure.items():
         file_list.append({"檔案": filename, "路徑": os.path.join(folder, filename)})
 
 df = pd.DataFrame(file_list)
+
+
+
+# 訓練模型
+model.fit(
+    train_gen,
+    epochs=10,
+    validation_data=val_gen
+)
+
+# 建立儲存資料夾（使用合法路徑）
+import os
+os.makedirs("file/model", exist_ok=True)
+
 # 儲存模型
 model.save("file/model/catdog_model.h5")
+
