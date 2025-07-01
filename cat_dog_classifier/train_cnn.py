@@ -97,4 +97,3 @@ df = pd.DataFrame([
     {"檔案": "train_cnn.py", "路徑": "file/cat_dog_classifier/train_cnn.py"},
     {"檔案": "environment.yml", "路徑": "file/environment.yml"},
 ])
-import ace_tools as tools; tools.display_dataframe_to_user(name="已修正檔案", dataframe=df)
