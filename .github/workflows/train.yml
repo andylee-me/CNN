@@ -39,14 +39,10 @@ jobs:
         with:
           name: catdog-model
           path: model/catdog_model.h5
-  
-      - name: Evaluate model
+
+      - name: Evaluate Model and Plot Confusion Matrix
         shell: bash -l {0}
-        run: python cat_dog_classifier/predict.py
-            - name: Evaluate Model and Plot Confusion Matrix
-        shell: bash -l {0}
-        run: |
-          python cat_dog_classifier/evaluate_model.py
+        run: python cat_dog_classifier/evaluate_model.py
 
       - name: Upload confusion matrix image
         uses: actions/upload-artifact@v4
