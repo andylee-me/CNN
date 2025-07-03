@@ -26,6 +26,24 @@ train_generator = train_datagen.flow_from_directory(
     class_mode='binary'
 )
 
+pred_probs = model.predict(val_generator)
+pred_labels = (pred_probs > 0.5).astype(int).flatten()
+true_labels = val_generator.classes
+# 混淆矩陣
+cm = confusion_matrix(true_labels, pred_labels)
+labels = list(val_generator.class_indices.keys())
+# 繪圖
+plt.figure(figsize=(6, 5))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
+plt.title("Confusion Matrix on Validation Set")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.tight_layout()
+plt.savefig("file/model/confusion_matrix.png")
+
+
+
+
 # 評估模型
 loss, acc = model.evaluate(val_generator)
 print(f'驗證結果：val_loss = {loss:.4f}, val_accuracy = {acc:.4f}')
