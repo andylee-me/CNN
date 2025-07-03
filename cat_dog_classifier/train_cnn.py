@@ -52,19 +52,22 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 
 # 建立 CNN 模型
-model = Sequential([
-    Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)),
-    MaxPooling2D(2,2),
-    Conv2D(64, (3,3), activation='relu'),
-    MaxPooling2D(2,2),
-    Conv2D(128, (3,3), activation='relu'),
-    MaxPooling2D(2,2),
-    Flatten(),
-    Dropout(0.5),
-    Dense(256, activation='relu'),
-    Dropout(0.3),
-    Dense(1, activation='sigmoid')
-])
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Model
+
+base_model = MobileNetV2(input_shape=(128, 128, 3), include_top=False, weights='imagenet')
+base_model.trainable = False  # 冻結預訓練權重
+
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dropout(0.5)(x)
+x = Dense(128, activation='relu')(x)
+x = Dropout(0.3)(x)
+predictions = Dense(1, activation='sigmoid')(x)
+
+model = Model(inputs=base_model.input, outputs=predictions)
+
 
 
 # 編譯模型
