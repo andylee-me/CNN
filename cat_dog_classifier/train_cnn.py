@@ -24,6 +24,7 @@ train_datagen = ImageDataGenerator(
     shear_range=0.2,
     zoom_range=0.2,
     horizontal_flip=True
+    fill_mode='nearest'
 )
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -46,17 +47,20 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 
 # 建立 CNN 模型
-model = models.Sequential([
-    layers.Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)),
-    layers.MaxPooling2D(2, 2),
-    layers.Conv2D(64, (3,3), activation='relu'),
-    layers.MaxPooling2D(2,2),
-    layers.Conv2D(128, (3,3), activation='relu'),
-    layers.MaxPooling2D(2,2),
-    layers.Flatten(),
-    layers.Dense(512, activation='relu'),
-    layers.Dense(1, activation='sigmoid')
+model = Sequential([
+    Conv2D(32, (3,3), activation='relu', input_shape=(image_size, image_size, 3)),
+    MaxPooling2D(2,2),
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D(2,2),
+    Conv2D(128, (3,3), activation='relu'),
+    MaxPooling2D(2,2),
+    Flatten(),
+    Dropout(0.5),
+    Dense(256, activation='relu'),
+    Dropout(0.3),
+    Dense(1, activation='sigmoid')
 ])
+
 
 # 編譯模型
 model.compile(
@@ -67,6 +71,8 @@ model.compile(
 
 # 定義 EarlyStopping 回呼函數
 early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+ModelCheckpoint('best_model.keras', save_best_only=True),
+ReduceLROnPlateau(patience=2)
 
 # 開始訓練
 model.fit(
