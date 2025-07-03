@@ -1,5 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 # 圖片路徑與參數
 val_dir = 'file/kaggle_cats_vs_dogs_f/val'
