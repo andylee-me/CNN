@@ -2,7 +2,8 @@ import pandas as pd
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, callbacks
+
 
 # 資料夾路徑
 train_dir = 'file/kaggle_cats_vs_dogs_f/train'
