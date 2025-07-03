@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import layers, models, callbacks
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 # 資料夾路徑
