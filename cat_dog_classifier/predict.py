@@ -43,7 +43,8 @@ plt.title("Confusion Matrix on Validation Set")
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 plt.tight_layout()
-plt.savefig("file/model/confusion_matrix.png")
+os.makedirs('file/model', exist_ok=True)
+plt.savefig('file/model/confusion_matrix.png')
 
 
 
