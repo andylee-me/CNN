@@ -42,45 +42,38 @@ val_gen = val_datagen.flow_from_directory(
 )
 
 # 建立 CNN 模型
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
+
+# 建立 CNN 模型
 model = models.Sequential([
     layers.Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)),
-    layers.BatchNormalization(),
     layers.MaxPooling2D(2, 2),
-
     layers.Conv2D(64, (3,3), activation='relu'),
-    layers.BatchNormalization(),
     layers.MaxPooling2D(2,2),
-
     layers.Conv2D(128, (3,3), activation='relu'),
-    layers.BatchNormalization(),
     layers.MaxPooling2D(2,2),
-
     layers.Flatten(),
-    layers.Dropout(0.5),
     layers.Dense(512, activation='relu'),
-    layers.Dropout(0.5),  # 防止過擬合
     layers.Dense(1, activation='sigmoid')
 ])
 
+# 編譯模型
 model.compile(
     loss='binary_crossentropy',
     optimizer=Adam(learning_rate=0.0001),
     metrics=['accuracy']
 )
 
-# ✅ 加入 EarlyStopping + ModelCheckpoint
-os.makedirs("model", exist_ok=True)
-callbacks_list = [
-    callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True),
-    callbacks.ModelCheckpoint("model/catdog_model.h5", save_best_only=True)
-]
+# 定義 EarlyStopping 回呼函數
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
-# 模型訓練
+# 開始訓練
 model.fit(
     train_gen,
-    epochs=30,
+    epochs=20,
     validation_data=val_gen,
-    callbacks=[early_stop]
+    callbacks=[early_stop]  # ← 注意：這裡才使用 early_stop，並且要在上面先定義好
 )
 
 
