@@ -53,7 +53,7 @@ from tensorflow.keras.optimizers import Adam
 
 # 建立 CNN 模型
 model = Sequential([
-    Conv2D(32, (3,3), activation='relu', input_shape=(img_size, img_size, 3)),
+    Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)),
     MaxPooling2D(2,2),
     Conv2D(64, (3,3), activation='relu'),
     MaxPooling2D(2,2),
