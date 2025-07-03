@@ -4,8 +4,11 @@ channels:
 dependencies:
   - python=3.10
   - pip
+  
   - pip:
-    - tensorflow
-    - matplotlib
-    - numpy
-    - pandas
+      - tensorflow
+      - matplotlib
+      - numpy
+      - pandas
+      - scikit-learn
+      - seaborn
