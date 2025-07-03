@@ -62,7 +62,7 @@ model = models.Sequential([
 
 model.compile(
     loss='binary_crossentropy',
-    optimizer='adam',
+    optimizer=Adam(learning_rate=0.0001),
     metrics=['accuracy']
 )
 
