@@ -1,101 +1,88 @@
-# train_cnn.py
-import os
-import pandas as pd
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, DepthwiseConv2D, BatchNormalization, ReLU, MaxPooling2D, GlobalAveragePooling2D, Dropout, Dense
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-
-# === train_cnn.py ===
 import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
+from tensorflow.keras.layers import DepthwiseConv2D, Conv2D, BatchNormalization, ReLU, GlobalAveragePooling2D, Dropout, Dense, Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 # 資料夾路徑
 train_dir = 'file/kaggle_cats_vs_dogs_f/train'
 val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 
-# 圖像參數
+# 參數
 img_size = (128, 128)
 batch_size = 32
+epochs = 20
 
-# 圖像增強與資料生成器
+# 圖像增強
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    zoom_range=0.2,
-    horizontal_flip=True
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    shear_range=0.1,
+    zoom_range=0.1,
+    horizontal_flip=True,
+    fill_mode='nearest'
 )
 val_datagen = ImageDataGenerator(rescale=1./255)
 
 train_gen = train_datagen.flow_from_directory(
-    train_dir, target_size=img_size, batch_size=batch_size,
-    class_mode='binary', shuffle=True
+    train_dir, target_size=img_size, batch_size=batch_size, class_mode='binary'
 )
 val_gen = val_datagen.flow_from_directory(
-    val_dir, target_size=img_size, batch_size=batch_size,
-    class_mode='binary', shuffle=False
+    val_dir, target_size=img_size, batch_size=batch_size, class_mode='binary'
 )
 
-# 儲存類別對應
-with open('file/cat_dog_classifier/class_indices.json', 'w') as f:
-    json.dump(train_gen.class_indices, f)
+# 建立 MobileNetV2-like 模型
+def conv_block(x, filters):
+    x = DepthwiseConv2D(kernel_size=3, padding='same')(x)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+    x = Conv2D(filters, kernel_size=1)(x)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+    return x
 
-# 模仿 MobileNetV2 風格的模型
-def build_mobilenet_like(input_shape):
-    inputs = tf.keras.Input(shape=input_shape)
+inputs = Input(shape=(128, 128, 3))
+x = Conv2D(32, 3, padding='same')(inputs)
+x = BatchNormalization()(x)
+x = ReLU()(x)
 
-    x = layers.Rescaling(1./255)(inputs)
+x = conv_block(x, 64)
+x = conv_block(x, 128)
+x = conv_block(x, 256)
 
-    for filters in [32, 64, 128]:
-        x = layers.DepthwiseConv2D(kernel_size=3, padding='same')(x)
-        x = layers.Conv2D(filters, kernel_size=1)(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.ReLU()(x)
-        x = layers.MaxPooling2D(pool_size=2)(x)
+x = GlobalAveragePooling2D()(x)
+x = Dropout(0.5)(x)
+outputs = Dense(1, activation='sigmoid')(x)
 
-    x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dropout(0.4)(x)
-    outputs = layers.Dense(1, activation='sigmoid')(x)
+model = Model(inputs, outputs)
+model.compile(optimizer=Adam(1e-4), loss='binary_crossentropy', metrics=['accuracy'])
 
-    return models.Model(inputs, outputs)
-
-model = build_mobilenet_like((128, 128, 3))
-
-model.compile(
-    loss='binary_crossentropy',
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-    metrics=['accuracy']
-)
-
-# 回呼函數
-callbacks = [
-    EarlyStopping(patience=5, restore_best_weights=True),
-    ReduceLROnPlateau(patience=3, factor=0.5, verbose=1),
-    ModelCheckpoint('model/catdog_model.h5', save_best_only=True)
-]
-
-# 建立資料夾
+# Callbacks
 os.makedirs('model', exist_ok=True)
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+checkpoint = ModelCheckpoint('model/catdog_model.h5', save_best_only=True)
+lr_scheduler = ReduceLROnPlateau(patience=2)
 
-# 訓練模型
+# 訓練
 model.fit(
     train_gen,
-    epochs=20,
     validation_data=val_gen,
-    callbacks=callbacks
+    epochs=epochs,
+    callbacks=[early_stop, checkpoint, lr_scheduler]
 )
 
-import json
-
 # 儲存 class_indices
-with open("file/cat_dog_classifier/class_indices.json", "w") as f:
+with open('cat_dog_classifier/class_indices.json', 'w') as f:
     json.dump(train_gen.class_indices, f)
 
+
+# 建立檔案夾與寫入
+os.makedirs("file/cat_dog_classifier", exist_ok=True)
+with open("file/cat_dog_classifier/train_cnn.py", "w") as f:
+    f.write(train_script)
