@@ -92,3 +92,10 @@ model.fit(
     validation_data=val_gen,
     callbacks=callbacks
 )
+
+import json
+
+# 儲存 class_indices
+with open("file/cat_dog_classifier/class_indices.json", "w") as f:
+    json.dump(train_gen.class_indices, f)
+
