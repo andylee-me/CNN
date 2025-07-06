@@ -88,7 +88,7 @@ history = model.fit(
     validation_data=val_gen,
     callbacks=[early_stop, reduce_lr, checkpoint]
 )
-'''
+
 
 os.makedirs("file/cat_dog_classifier", exist_ok=True)
 with open("file/cat_dog_classifier/train_cnn.py", "w", encoding="utf-8") as f:
