@@ -1,20 +1,20 @@
 import os
-import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Conv2D, DepthwiseConv2D, BatchNormalization,
-                                     ReLU, Add, GlobalAveragePooling2D, Dense)
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (Conv2D, DepthwiseConv2D, BatchNormalization,
+                                     ReLU, MaxPooling2D, Dropout, GlobalAveragePooling2D, Dense)
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
-# 資料夾路徑
+# ===== 資料路徑與設定 =====
 train_dir = 'file/kaggle_cats_vs_dogs_f/train'
 val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 img_size = (128, 128)
 batch_size = 32
+epochs = 30
 
-# 資料增強
+# ===== 資料增強 =====
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     rotation_range=20,
@@ -27,81 +27,74 @@ train_datagen = ImageDataGenerator(
 )
 val_datagen = ImageDataGenerator(rescale=1./255)
 
-train_gen = train_datagen.flow_from_directory(
-    train_dir, target_size=img_size, batch_size=batch_size, class_mode='binary'
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='binary'
 )
-val_gen = val_datagen.flow_from_directory(
-    val_dir, target_size=img_size, batch_size=batch_size, class_mode='binary'
+val_generator = val_datagen.flow_from_directory(
+    val_dir,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='binary'
 )
 
-# 模仿 MobileNetV2 的 block
-def inverted_residual_block(x, expansion, out_channels, strides):
-    in_channels = x.shape[-1]
+# ===== 自定義 MobileNetV2 風格 CNN 架構 =====
+def build_custom_mobilenet_style_cnn(input_shape=(128, 128, 3)):
+    model = Sequential()
 
-    expanded = Conv2D(in_channels * expansion, (1, 1), padding='same', use_bias=False)(x)
-    expanded = BatchNormalization()(expanded)
-    expanded = ReLU(6.)(expanded)
+    model.add(Conv2D(32, (3, 3), padding='same', input_shape=input_shape))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(2, 2))
 
-    dw = DepthwiseConv2D(kernel_size=(3, 3), strides=strides, padding='same', use_bias=False)(expanded)
-    dw = BatchNormalization()(dw)
-    dw = ReLU(6.)(dw)
+    model.add(DepthwiseConv2D(kernel_size=3, padding='same'))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(Conv2D(64, (1, 1), padding='same'))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(2, 2))
 
-    projected = Conv2D(out_channels, (1, 1), padding='same', use_bias=False)(dw)
-    projected = BatchNormalization()(projected)
+    model.add(DepthwiseConv2D(kernel_size=3, padding='same'))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(Conv2D(128, (1, 1), padding='same'))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(2, 2))
 
-    if strides == 1 and in_channels == out_channels:
-        return Add()([x, projected])
-    else:
-        return projected
+    model.add(GlobalAveragePooling2D())
+    model.add(Dropout(0.4))
+    model.add(Dense(1, activation='sigmoid'))
 
-# 建立模型
-def build_mobilenet_cnn(input_shape=(128, 128, 3), num_classes=1):
-    inputs = Input(shape=input_shape)
-    x = Conv2D(32, (3, 3), strides=(2, 2), padding='same', use_bias=False)(inputs)
-    x = BatchNormalization()(x)
-    x = ReLU(6.)(x)
+    return model
 
-    x = inverted_residual_block(x, expansion=1, out_channels=16, strides=1)
-    x = inverted_residual_block(x, expansion=6, out_channels=24, strides=2)
-    x = inverted_residual_block(x, expansion=6, out_channels=24, strides=1)
-    x = inverted_residual_block(x, expansion=6, out_channels=32, strides=2)
-    x = inverted_residual_block(x, expansion=6, out_channels=32, strides=1)
-
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(128, activation='relu')(x)
-    outputs = Dense(num_classes, activation='sigmoid')(x)
-
-    return Model(inputs, outputs)
-
-# 編譯模型
-model = build_mobilenet_cnn()
+# ===== 建立與編譯模型 =====
+model = build_custom_mobilenet_style_cnn()
 model.compile(
-    optimizer=Adam(learning_rate=0.0001),
     loss='binary_crossentropy',
+    optimizer=Adam(learning_rate=1e-4),
     metrics=['accuracy']
 )
 
-# 回調函數
+# ===== Callbacks =====
 callbacks = [
     EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True),
-    ModelCheckpoint('model/best_model.keras', save_best_only=True),
-    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=2, verbose=1)
+    ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.5, verbose=1),
+    ModelCheckpoint('model/best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
 ]
 
-# 訓練
-model.fit(
-    train_gen,
-    epochs=20,
-    validation_data=val_gen,
+# ===== 模型訓練 =====
+history = model.fit(
+    train_generator,
+    epochs=epochs,
+    validation_data=val_generator,
     callbacks=callbacks
 )
 
-# 保存模型
-os.makedirs('model', exist_ok=True)
-model.save('model/catdog_model.h5')
-
-# 驗證模型是否儲存成功
-if os.path.exists('model/catdog_model.h5'):
-    print("✅ Model saved successfully!")
-else:
-    print("❌ Model save failed.")
+# ===== 儲存最終模型 =====
+os.makedirs("model", exist_ok=True)
+model.save("model/catdog_model.h5")
+print("✅ 模型已儲存至 model/catdog_model.h5")
