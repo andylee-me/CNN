@@ -57,3 +57,9 @@ print(f'驗證結果：val_loss = {loss:.4f}, val_accuracy = {acc:.4f}')
 
 loss, acc = model.evaluate(train_generator)
 print(f'驗證結果：train_loss = {loss:.4f}, train_accuracy = {acc:.4f}')
+
+print(train_gen.class_indices)
+print(train_gen.classes[:10])
+print(train_gen.samples, val_gen.samples)
+model.summary()
+
