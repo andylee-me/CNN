@@ -7,6 +7,57 @@ from tensorflow.keras import layers, models, callbacks
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, DepthwiseConv2D, BatchNormalization, ReLU, Add, GlobalAveragePooling2D, Dense
+
+
+
+def inverted_residual_block(x, expansion, out_channels, strides):
+    in_channels = x.shape[-1]
+
+    # 1x1 Expand
+    expanded = Conv2D(in_channels * expansion, (1, 1), padding='same', use_bias=False)(x)
+    expanded = BatchNormalization()(expanded)
+    expanded = ReLU(6.)(expanded)
+
+    # 3x3 Depthwise
+    dw = DepthwiseConv2D(kernel_size=(3, 3), strides=strides, padding='same', use_bias=False)(expanded)
+    dw = BatchNormalization()(dw)
+    dw = ReLU(6.)(dw)
+
+    # 1x1 Project
+    projected = Conv2D(out_channels, (1, 1), padding='same', use_bias=False)(dw)
+    projected = BatchNormalization()(projected)
+
+    # Shortcut Connection (if input and output have same shape)
+    if strides == 1 and in_channels == out_channels:
+        return Add()([x, projected])
+    else:
+        return projected
+
+def build_mobilenet_cnn(input_shape=(128, 128, 3), num_classes=1):
+    inputs = Input(shape=input_shape)
+
+    # Initial layer
+    x = Conv2D(32, (3, 3), strides=(2, 2), padding='same', use_bias=False)(inputs)
+    x = BatchNormalization()(x)
+    x = ReLU(6.)(x)
+
+    # 模仿 MobileNetV2 結構（部分簡化）
+    x = inverted_residual_block(x, expansion=1, out_channels=16, strides=1)
+    x = inverted_residual_block(x, expansion=6, out_channels=24, strides=2)
+    x = inverted_residual_block(x, expansion=6, out_channels=24, strides=1)
+    x = inverted_residual_block(x, expansion=6, out_channels=32, strides=2)
+    x = inverted_residual_block(x, expansion=6, out_channels=32, strides=1)
+
+    # Global Pooling + Dense
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(128, activation='relu')(x)
+    outputs = Dense(num_classes, activation='sigmoid')(x)
+
+    model = Model(inputs, outputs)
+    return model
+
 
 # 資料夾路徑
 train_dir = 'file/kaggle_cats_vs_dogs_f/train'
@@ -60,11 +111,8 @@ x = Dense(128, activation='relu')(x)
 x = Dropout(0.3)(x)
 predictions = Dense(1, activation='sigmoid')(x)
 
-model = Model(inputs=base_model.input, outputs=predictions)
-
-
-
-# 編譯模型
+from tensorflow.keras.optimizers import Adam
+model = build_mobilenet_cnn(input_shape=(128, 128, 3), num_classes=1)
 model.compile(
     loss='binary_crossentropy',
     optimizer=Adam(learning_rate=0.0001),
