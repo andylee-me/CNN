@@ -2,7 +2,7 @@ import os
 import json
 
 # 強化版 CNN 模型內容（模仿 MobileNet 結構）
-train_cnn_strong = '''import os
+import os
 import json
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -93,11 +93,6 @@ model.fit(
     validation_data=val_gen,
     callbacks=callbacks
 )
-'''
 
-# 寫入檔案
-train_path = "file/cat_dog_classifier/train_cnn.py"
-os.makedirs(os.path.dirname(train_path), exist_ok=True)
-with open(train_path, "w", encoding="utf-8") as f:
-    f.write(train_cnn_strong)
+
 
