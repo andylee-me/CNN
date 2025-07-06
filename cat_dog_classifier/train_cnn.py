@@ -78,5 +78,8 @@ model.fit(
 )
 
 # 儲存 class_indices
-with open('cat_dog_classifier/class_indices.json', 'w') as f:
+# 正確版本：確保儲存在 file/cat_dog_classifier 資料夾中
+os.makedirs('file/cat_dog_classifier', exist_ok=True)
+with open('file/cat_dog_classifier/class_indices.json', 'w') as f:
     json.dump(train_gen.class_indices, f)
+
