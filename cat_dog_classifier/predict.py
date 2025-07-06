@@ -1,53 +1,49 @@
-import json
 import os
+import json
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import load_model
 from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# 資料路徑
-val_dir = 'file/kaggle_cats_vs_dogs_f/val'
-model_path = 'model/catdog_model.h5'
-class_indices_path = 'file/cat_dog_classifier/class_indices.json'
-
-# 載入模型與 class label 對應
-model = tf.keras.models.load_model(model_path)
-with open(class_indices_path, 'r') as f:
+# 載入模型與類別對應表
+model = load_model('model/catdog_model.h5')
+with open('model/class_indices.json') as f:
     class_indices = json.load(f)
+class_labels = {v: k for k, v in class_indices.items()}
 
-# 建立反向對應
-idx_to_class = {v: k for k, v in class_indices.items()}
+# 圖像參數
+img_size = (128, 128)
+batch_size = 32
 
-# 預處理
+# 準備資料
+val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 datagen = ImageDataGenerator(rescale=1./255)
 val_gen = datagen.flow_from_directory(
     val_dir,
-    target_size=(128, 128),
-    batch_size=32,
+    target_size=img_size,
+    batch_size=batch_size,
     class_mode='binary',
     shuffle=False
 )
 
 # 預測
-y_true = val_gen.classes
-y_pred = model.predict(val_gen)
-y_pred_label = (y_pred > 0.5).astype(int).flatten()
+pred_probs = model.predict(val_gen)
+pred_classes = (pred_probs > 0.5).astype('int32').flatten()
+true_classes = val_gen.classes
 
 # 混淆矩陣
-cm = confusion_matrix(y_true, y_pred_label)
-plt.figure(figsize=(6,5))
-sns.heatmap(cm, annot=True, fmt='d', xticklabels=idx_to_class.values(), yticklabels=idx_to_class.values(), cmap='Blues')
+cm = confusion_matrix(true_classes, pred_classes)
+plt.figure(figsize=(6, 5))
+sns.heatmap(cm, annot=True, fmt='d', xticklabels=class_labels.values(), yticklabels=class_labels.values(), cmap='Blues')
+plt.title('Confusion Matrix')
 plt.xlabel('Predicted')
 plt.ylabel('True')
-plt.title('Confusion Matrix')
-plt.savefig('file/cat_dog_classifier/confusion_matrix.png')
+plt.savefig('confusion_matrix.png')
 plt.close()
 
-# 分類報告
-report = classification_report(y_true, y_pred_label, target_names=idx_to_class.values())
+# 顯示分類報告
+report = classification_report(true_classes, pred_classes, target_names=class_labels.values())
 print(report)
-
-with open('file/cat_dog_classifier/classification_report.txt', 'w') as f:
-    f.write(report)
