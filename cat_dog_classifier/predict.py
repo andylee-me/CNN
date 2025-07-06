@@ -5,7 +5,7 @@ from tensorflow.keras.preprocessing import image
 import matplotlib.pyplot as plt
 
 # 載入訓練好的模型
-model = tf.keras.models.load_model('model/catdog_mobilenet_like.h5')
+model = tf.keras.models.load_model('model/catdog_model.h5')
 
 # 圖片參數
 img_size = (128, 128)
