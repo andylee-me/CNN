@@ -80,9 +80,3 @@ model.fit(
 # 儲存 class_indices
 with open('cat_dog_classifier/class_indices.json', 'w') as f:
     json.dump(train_gen.class_indices, f)
-
-
-# 建立檔案夾與寫入
-os.makedirs("file/cat_dog_classifier", exist_ok=True)
-with open("file/cat_dog_classifier/train_cnn.py", "w") as f:
-    f.write(train_script)
