@@ -1,98 +1,86 @@
 import os
 import json
-
-# 強化版 CNN 模型內容（模仿 MobileNet 結構）
-import os
-import json
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv2D, DepthwiseConv2D, BatchNormalization, ReLU, GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization, GlobalAveragePooling2D
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 
-# 資料夾
+# 資料夾路徑
 train_dir = 'file/kaggle_cats_vs_dogs_f/train'
 val_dir = 'file/kaggle_cats_vs_dogs_f/val'
+model_dir = 'model'
+os.makedirs(model_dir, exist_ok=True)
 
-# 參數
-img_size = 128
+# 圖像參數
+img_size = (128, 128)
 batch_size = 32
-epochs = 30
 
-# 資料增強
+# ImageDataGenerator
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
+    shear_range=0.2,
     zoom_range=0.2,
-    horizontal_flip=True
+    horizontal_flip=True,
+    fill_mode='nearest'
 )
 val_datagen = ImageDataGenerator(rescale=1./255)
 
 train_gen = train_datagen.flow_from_directory(
     train_dir,
-    target_size=(img_size, img_size),
+    target_size=img_size,
     batch_size=batch_size,
     class_mode='binary'
 )
 val_gen = val_datagen.flow_from_directory(
     val_dir,
-    target_size=(img_size, img_size),
+    target_size=img_size,
     batch_size=batch_size,
-    class_mode='binary'
+    class_mode='binary',
+    shuffle=False
 )
 
 # 儲存 class_indices
-os.makedirs('file/cat_dog_classifier', exist_ok=True)
-with open('file/cat_dog_classifier/class_indices.json', 'w') as f:
+with open(os.path.join(model_dir, 'class_indices.json'), 'w') as f:
     json.dump(train_gen.class_indices, f)
 
-# 建立 MobileNet-like Block
-def depthwise_separable_conv(x, pointwise_filters, strides=1):
-    x = DepthwiseConv2D(kernel_size=3, strides=strides, padding='same')(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = Conv2D(pointwise_filters, kernel_size=1, padding='same')(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    return x
+# 建立強化版 CNN 模型
+model = Sequential([
+    Conv2D(32, (3,3), activation='relu', input_shape=(img_size[0], img_size[1], 3)),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+    Conv2D(64, (3,3), activation='relu'),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+    Conv2D(128, (3,3), activation='relu'),
+    BatchNormalization(),
+    MaxPooling2D(2, 2),
+    GlobalAveragePooling2D(),
+    Dropout(0.5),
+    Dense(128, activation='relu'),
+    Dropout(0.3),
+    Dense(1, activation='sigmoid')
+])
 
-# 模型架構
-input_tensor = Input(shape=(img_size, img_size, 3))
-x = Conv2D(32, 3, padding='same', activation='relu')(input_tensor)
-x = depthwise_separable_conv(x, 64)
-x = depthwise_separable_conv(x, 128, strides=2)
-x = Dropout(0.25)(x)
-x = depthwise_separable_conv(x, 128)
-x = depthwise_separable_conv(x, 256, strides=2)
-x = GlobalAveragePooling2D()(x)
-x = Dropout(0.5)(x)
-output = Dense(1, activation='sigmoid')(x)
+model.compile(
+    loss='binary_crossentropy',
+    optimizer=Adam(learning_rate=1e-4),
+    metrics=['accuracy']
+)
 
-model = Model(inputs=input_tensor, outputs=output)
-
-# 編譯
-model.compile(optimizer=Adam(learning_rate=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
-
-# Callback
-callbacks = [
-    EarlyStopping(patience=5, monitor='val_loss', restore_best_weights=True),
-    ModelCheckpoint('model/catdog_model.h5', save_best_only=True),
-    ReduceLROnPlateau(patience=2)
-]
-
-# 建立儲存資料夾
-os.makedirs('model', exist_ok=True)
+# Callbacks
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+checkpoint = ModelCheckpoint(os.path.join(model_dir, 'catdog_model.h5'), save_best_only=True)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.5, min_lr=1e-6)
 
 # 訓練模型
 model.fit(
     train_gen,
-    epochs=epochs,
+    epochs=30,
     validation_data=val_gen,
-    callbacks=callbacks
+    callbacks=[early_stop, checkpoint, reduce_lr]
 )
-
-
-
