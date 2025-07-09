@@ -47,3 +47,32 @@ plt.close()
 # 顯示分類報告
 report = classification_report(true_classes, pred_classes, target_names=class_labels.values())
 print(report)
+
+
+######################################
+train_dir = 'file/kaggle_cats_vs_dogs_f/train'
+train_gen = datagen.flow_from_directory(
+    train_dir,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='binary',
+    shuffle=False
+)
+# 預測
+pred_probs = model.predict(train_gen)
+pred_classes = (pred_probs > 0.5).astype('int32').flatten()
+true_classes = train_gen.classes
+
+# 混淆矩陣
+cm = confusion_matrix(true_classes, pred_classes)
+plt.figure(figsize=(6, 5))
+sns.heatmap(cm, annot=True, fmt='d', xticklabels=class_labels.values(), yticklabels=class_labels.values(), cmap='Blues')
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.savefig('confusion_matrix.png')
+plt.close()
+
+# 顯示分類報告
+report = classification_report(true_classes, pred_classes, target_names=class_labels.values())
+print(report)
