@@ -18,17 +18,23 @@ img_size = (128, 128)
 # 3️⃣ 預處理器
 datagen = ImageDataGenerator(rescale=1./255)
 
-# 4️⃣ 統一處理 train、val 資料
+# 4️⃣ 要處理的資料集
 datasets = {
     "train": train_dir,
     "val": val_dir
 }
 
-# 建立 misclassified 資料夾並清空舊結果
+# 5️⃣ 建立 misclassified 資料夾（先刪除舊的，確保乾淨）
 misclassified_dir = "misclassified"
 if os.path.exists(misclassified_dir):
+    print("🧹 清理舊的 misclassified 資料夾...")
     shutil.rmtree(misclassified_dir)
 os.makedirs(misclassified_dir, exist_ok=True)
+
+def ensure_subdirs(base_path):
+    """確保 base_path 下有 cat/ dog/ 兩個子資料夾"""
+    for cls in ["cat", "dog"]:
+        os.makedirs(os.path.join(base_path, cls), exist_ok=True)
 
 def evaluate_and_save(dataset_name, dataset_path):
     """預測資料集，並將錯誤圖片複製到 misclassified/{dataset_name}/"""
@@ -51,8 +57,7 @@ def evaluate_and_save(dataset_name, dataset_path):
     # 建立 dataset 對應的 misclassified 子資料夾
     dataset_mis_dir = os.path.join(misclassified_dir, dataset_name)
     os.makedirs(dataset_mis_dir, exist_ok=True)
-    os.makedirs(os.path.join(dataset_mis_dir, "cat"), exist_ok=True)
-    os.makedirs(os.path.join(dataset_mis_dir, "dog"), exist_ok=True)
+    ensure_subdirs(dataset_mis_dir)
 
     # 統計錯誤
     misclassified_count = 0
@@ -61,11 +66,13 @@ def evaluate_and_save(dataset_name, dataset_path):
             src_path = file_paths[idx]
             filename = os.path.basename(src_path)
 
+            # 根據真實標籤分類到 cat/dog
             if true_label == 0:  # 真實是 cat
                 dst_path = os.path.join(dataset_mis_dir, "cat", f"wrong_pred_{filename}")
             else:  # 真實是 dog
                 dst_path = os.path.join(dataset_mis_dir, "dog", f"wrong_pred_{filename}")
 
+            # 複製檔案
             shutil.copy(src_path, dst_path)
             misclassified_count += 1
 
@@ -77,13 +84,13 @@ def evaluate_and_save(dataset_name, dataset_path):
 
     return total_images, misclassified_count, accuracy
 
-# 5️⃣ 執行 train 與 val 的錯誤檢查
+# 6️⃣ 執行 train 與 val 的錯誤檢查
 results = {}
 for name, path in datasets.items():
     total, wrong, acc = evaluate_and_save(name, path)
     results[name] = {"total": total, "wrong": wrong, "accuracy": acc}
 
-# 6️⃣ 最後輸出總結
+# 7️⃣ 最後輸出總結
 print("\n📊 最終結果總結：")
 for ds, info in results.items():
     print(f"➡ {ds}: {info['accuracy']:.2f}% (錯誤 {info['wrong']}/{info['total']})")
