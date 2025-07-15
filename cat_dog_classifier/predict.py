@@ -7,6 +7,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 # 1️⃣ 模型路徑
 model_path = "model/catdog_model.h5"
 assert os.path.exists(model_path), f"❌ 找不到模型 {model_path}"
+print(f"✅ 載入模型: {model_path}")
 model = load_model(model_path)
 
 # 2️⃣ 資料夾
@@ -16,7 +17,6 @@ img_size = (128, 128)
 
 # 3️⃣ 預處理器
 datagen = ImageDataGenerator(rescale=1./255)
-
 datasets = {"train": train_dir, "val": val_dir}
 
 # 4️⃣ 每次先刪掉舊的 misclassified
@@ -26,11 +26,13 @@ if os.path.exists(misclassified_dir):
 os.makedirs(misclassified_dir, exist_ok=True)
 
 def ensure_subdirs(base_path):
+    """確保 cat/dog 子資料夾存在"""
     for cls in ["cat", "dog"]:
         os.makedirs(os.path.join(base_path, cls), exist_ok=True)
 
 def evaluate_and_save(dataset_name, dataset_path):
     print(f"\n🚀 開始檢查 {dataset_name} 資料集...")
+
     gen = datagen.flow_from_directory(
         dataset_path,
         target_size=img_size,
@@ -39,7 +41,9 @@ def evaluate_and_save(dataset_name, dataset_path):
         shuffle=False
     )
 
-    print(f"➡ 共找到 {len(gen.filepaths)} 張圖片")
+    total_images = len(gen.filepaths)
+    print(f"➡ 共找到 {total_images} 張圖片")
+
     pred_probs = model.predict(gen, verbose=1)
     pred_labels = (pred_probs > 0.5).astype(int).flatten()
     true_labels = gen.classes
@@ -57,15 +61,13 @@ def evaluate_and_save(dataset_name, dataset_path):
         if true_label != pred_label:
             src_path = file_paths[idx]
             filename = os.path.basename(src_path)
-            
-            # 看看 src_path 到底是不是存在的
+
             if not os.path.exists(src_path):
-                print(f"❌ 找不到原始檔案: {src_path}")
+                print(f"⚠️ 找不到原始檔案: {src_path}")
                 continue
-            
+
             dst_cls = "cat" if true_label == 0 else "dog"
             dst_path = os.path.join(dataset_mis_dir, dst_cls, f"wrong_pred_{filename}")
-
             shutil.copy(src_path, dst_path)
             misclassified_count += 1
 
@@ -73,12 +75,23 @@ def evaluate_and_save(dataset_name, dataset_path):
                 print(f"❌ Misclassified -> {src_path} → {dst_path}")
                 debug_samples += 1
 
-    total_images = len(true_labels)
     acc = (1 - misclassified_count / total_images) * 100
     print(f"✅ {dataset_name} 集: 共 {total_images} 張, 錯誤 {misclassified_count}, 準確率 {acc:.2f}%")
 
+    # 如果完全沒有錯誤，至少放個 README.txt 以免 zip 空資料夾
+    if misclassified_count == 0:
+        with open(os.path.join(dataset_mis_dir, "README.txt"), "w") as f:
+            f.write("This dataset has no misclassified images 🎉")
+
+# ✅ 跑 train + val
 for name, path in datasets.items():
     evaluate_and_save(name, path)
 
-print("\n📂 檢查 misclassified/ 資料夾結構：")
-print(os.listdir(misclassified_dir))
+# ✅ 最後印出完整目錄樹
+print("\n📂 最終 misclassified 資料夾結構：")
+for root, dirs, files in os.walk(misclassified_dir):
+    level = root.replace(misclassified_dir, "").count(os.sep)
+    indent = " " * 2 * level
+    print(f"{indent}📁 {os.path.basename(root)}/")
+    for f in files:
+        print(f"{indent}  ├── {f}")
