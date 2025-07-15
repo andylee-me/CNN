@@ -75,4 +75,4 @@ model.fit(
 )
 
 # 儲存模型
-model.save('model/catdog_overfit_model.h5')
+model.save('model/catdog_model.h5')
