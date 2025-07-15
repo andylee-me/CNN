@@ -1,4 +1,4 @@
-name: Train CNN CatDog Model
+name: Train and Evaluate CNN CatDog Model
 
 on:
   push:
@@ -6,13 +6,15 @@ on:
       - main
 
 jobs:
-  train:
+  train-and-eval:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout 原始碼
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ 安裝 conda 環境
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -20,32 +22,37 @@ jobs:
           environment-file: environment.yml
           activate-environment: catdog-env
 
+      # 3️⃣ 安裝 gdown 下載 dataset
       - name: Install gdown
         run: pip install gdown
 
       - name: Download dataset from Google Drive
         run: |
           gdown 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
+          unzip dataset.zip -d file/
 
-      - name: Unzip dataset
-        run: unzip dataset.zip -d file/
-
+      # 4️⃣ 訓練模型並儲存到 model/
       - name: Train CNN Model
-        shell: bash -l {0}
         run: python cat_dog_classifier/train_cnn.py
 
-      - name: Upload trained model artifact
+      # 5️⃣ 預測，並產生 misclassified/ 錯誤圖片
+      - name: Run Evaluation (train + val)
+        run: python cat_dog_classifier/predict.py
+
+      # 6️⃣ 打包錯誤圖片資料夾
+      - name: Archive misclassified images
+        run: zip -r misclassified.zip misclassified/
+
+      # 7️⃣ 上傳錯誤圖片作為 Artifact
+      - name: Upload misclassified images
+        uses: actions/upload-artifact@v4
+        with:
+          name: misclassified-images
+          path: misclassified.zip
+
+      # 8️⃣ 上傳模型作為 Artifact
+      - name: Upload trained model
         uses: actions/upload-artifact@v4
         with:
           name: catdog-model
           path: model/catdog_model.h5
-
-      - name: Evaluate Model and Plot Confusion Matrix
-        shell: bash -l {0}
-        run: python cat_dog_classifier/predict.py
-
-      - name: Upload confusion matrix image
-        uses: actions/upload-artifact@v4
-        with:
-          name: confusion-matrix
-          path: file/model/confusion_matrix.png
