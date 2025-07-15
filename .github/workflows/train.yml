@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ 安裝 conda 環境
+      # 2️⃣ 安裝 conda 並建立環境
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -22,22 +22,28 @@ jobs:
           environment-file: environment.yml
           activate-environment: catdog-env
 
-      # 3️⃣ 安裝 gdown 下載 dataset
-      - name: Install gdown
-        run: pip install gdown
-
+      # 3️⃣ 安裝 gdown 並下載資料集
       - name: Download dataset from Google Drive
+        shell: bash -l {0}
         run: |
+          conda activate catdog-env
+          pip install gdown
           gdown 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
           unzip dataset.zip -d file/
 
-      # 4️⃣ 訓練模型並儲存到 model/
+      # 4️⃣ 訓練模型
       - name: Train CNN Model
-        run: python cat_dog_classifier/train_cnn.py
+        shell: bash -l {0}
+        run: |
+          conda activate catdog-env
+          python cat_dog_classifier/train_cnn.py
 
-      # 5️⃣ 預測，並產生 misclassified/ 錯誤圖片
+      # 5️⃣ 預測錯誤圖片
       - name: Run Evaluation (train + val)
-        run: python cat_dog_classifier/predict.py
+        shell: bash -l {0}
+        run: |
+          conda activate catdog-env
+          python cat_dog_classifier/predict.py
 
       # 6️⃣ 打包錯誤圖片資料夾
       - name: Archive misclassified images
