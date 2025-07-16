@@ -45,7 +45,7 @@ jobs:
           conda activate catdog-env
           python cat_dog_classifier/predict.py
 
-      # 6️⃣ 打包錯誤圖片資料夾
+      # 6️⃣ 打包錯誤圖片資料夾 (保留 artifact)
       - name: Archive misclassified images
         run: zip -r misclassified.zip misclassified/
 
@@ -62,3 +62,18 @@ jobs:
         with:
           name: catdog-model
           path: model/catdog_model.h5
+
+      # ✅ 9️⃣ 把 misclassified 結果直接存進 repo
+      - name: Save misclassified results into repo
+        run: |
+          rm -rf misclassified_results
+          mv misclassified misclassified_results
+
+      # ✅ 🔟 Commit & Push 回 GitHub Repo
+      - name: Commit misclassified results
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add misclassified_results || echo "No files to add"
+          git commit -m "Add latest misclassified images" || echo "No changes to commit"
+          git push
