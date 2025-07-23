@@ -54,6 +54,10 @@ model = Sequential([
     BatchNormalization(),
     MaxPooling2D(2,2),
 
+    Conv2D(512, (3,3), activation='relu'),
+    BatchNormalization(),
+    MaxPooling2D(2,2),
+
     Flatten(),
     Dense(512, activation='relu'),
     Dropout(0.4),
