@@ -11,8 +11,8 @@ print(f"✅ 載入模型: {model_path}")
 model = load_model(model_path)
 
 # 2️⃣ 資料夾
-train_dir = "file/kaggle_cats_vs_dogs_f/kaggle_cats_vs_dogs_f/train"
-val_dir = "file/kaggle_cats_vs_dogs_f/kaggle_cats_vs_dogs_f/val"
+train_dir = "file/kaggle_cats_vs_dogs_f/train"
+val_dir = "file/kaggle_cats_vs_dogs_f/val"
 img_size = (128, 128)
 
 # 3️⃣ 預處理器
