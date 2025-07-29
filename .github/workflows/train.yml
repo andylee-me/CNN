@@ -30,6 +30,8 @@ jobs:
           pip install gdown
           gdown 19QvyV00Zq6dwRY3hA8z_PyHB-naUUMB7 -O dataset.zip
           unzip dataset.zip -d file/
+          echo "---- 解壓後內容 ----"
+          ls -R file/
 
       # 4️⃣ 訓練模型
       - name: Train CNN Model
