@@ -3,7 +3,7 @@ name: Train and Evaluate CNN CatDog Model
 on:
   push:
     branches:
-      - main
+      - main 
 
 jobs:
   train-and-eval:
