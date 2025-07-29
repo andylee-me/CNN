@@ -33,6 +33,14 @@ jobs:
           echo "---- 解壓後內容 ----"
           ls -R file/
 
+      # 3️⃣.5 Oversample training data
+      - name: Oversample training data
+        shell: bash -l {0}
+        run: |
+          conda activate catdog-env
+          python cat_dog_classifier/oversample_dataset.py
+          
+
       # 4️⃣ 訓練模型
       - name: Train CNN Model
         shell: bash -l {0}
