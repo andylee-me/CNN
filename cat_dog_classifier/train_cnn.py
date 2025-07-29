@@ -7,8 +7,8 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropou
 from tensorflow.keras.optimizers import Adam
 
 # 資料路徑
-train_dir = 'file/kaggle_cats_vs_dogs_f/kaggle_cats_vs_dogs_f/train'
-val_dir = 'file/kaggle_cats_vs_dogs_f/kaggle_cats_vs_dogs_f/val'
+train_dir = 'file/kaggle_cats_vs_dogs_f/train'
+val_dir = 'file/kaggle_cats_vs_dogs_f/val'
 os.makedirs('model', exist_ok=True)
 
 img_size = (128, 128)
