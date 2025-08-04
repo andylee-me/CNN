@@ -60,7 +60,7 @@ model = Sequential([
 
 # ⚙ 編譯模型
 model.compile(
-    optimizer=Adam(learning_rate=1e-4),
+    optimizer=Adam(learning_rate=1e-5),
     loss='binary_crossentropy',
     metrics=['accuracy']
 )
