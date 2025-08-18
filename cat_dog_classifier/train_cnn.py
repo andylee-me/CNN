@@ -1,178 +1,131 @@
-import os
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import os, json, shutil, tensorflow as tf
+from tensorflow.keras import mixed_precision
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.imagenet_utils import preprocess_input
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.optimizers import AdamW
 
-# 🔧 參數設定
-img_size = (128, 128)
-batch_size = 32
-train_dir = "file/kaggle_cats_vs_dogs_f/train"
-val_dir = "file/kaggle_cats_vs_dogs_f/val"
+# ============== 基本參數（無預訓練） ==============
+IMG_SIZE = (192, 192)            # 先用 192x192 加速；穩定再改回 224
+BATCH_SIZE = 64                  # 盡量加大，能提速也穩梯度
+EPOCHS = 80
+TRAIN_DIR = "file/kaggle_cats_vs_dogs_f/train"
+VAL_DIR   = "file/kaggle_cats_vs_dogs_f/val"
+MODEL_DIR = "model"; os.makedirs(MODEL_DIR, exist_ok=True)
+BEST_PATH = os.path.join(MODEL_DIR, "catdog_model.h5")
+IDX_PATH  = os.path.join(MODEL_DIR, "class_indices.json")
+MIS_DIR   = "misclassified_vgg16_scratch"
 
-# 🔁 資料預處理器
-train_datagen = ImageDataGenerator(
-    rescale=1./255,
-    rotation_range=10,
-    width_shift_range=0.05,
-    height_shift_range=0.05,
-    zoom_range=0.1,
-    horizontal_flip=True,
-)
+# ============== 加速開關 ==============
+# 混合精度（Apple/M-series or 支援半精度的 GPU 上很有感）
+mixed_precision.set_global_policy('mixed_float16')
+AUTOTUNE = tf.data.AUTOTUNE
 
-val_datagen = ImageDataGenerator(rescale=1./255)
+# ============== tf.data 載入 ==============
+def build_ds(root, training):
+    ds = tf.keras.utils.image_dataset_from_directory(
+        root, image_size=IMG_SIZE, batch_size=BATCH_SIZE,
+        label_mode='binary', shuffle=training
+    )
+    # VGG 的 'caffe' 前處理（與 rescale=1/255 不同！）
+    def _pp(x, y):
+        x = tf.cast(x, tf.float32)           # 到 float32 再做 caffe preprocess
+        x = preprocess_input(x, mode='caffe')
+        return x, y
+    ds = ds.map(_pp, num_parallel_calls=AUTOTUNE)
+    if training:
+        ds = ds.cache().shuffle(2048)
+    else:
+        ds = ds.cache()
+    ds = ds.prefetch(AUTOTUNE)
+    return ds
 
-train_gen = train_datagen.flow_from_directory(
-    train_dir,
-    target_size=img_size,
-    batch_size=batch_size,
-    class_mode='binary'
-)
+train_ds = build_ds(TRAIN_DIR, training=True)
+val_ds   = build_ds(VAL_DIR,   training=False)
 
-val_gen = val_datagen.flow_from_directory(
-    val_dir,
-    target_size=img_size,
-    batch_size=batch_size,
-    class_mode='binary'
-)
+# 儲存 class_indices（由 dataset 讀不到，手動取目錄順序）
+class_names = sorted(next(os.walk(TRAIN_DIR))[1])
+class_indices = {name: i for i, name in enumerate(class_names)}
+with open(IDX_PATH, "w") as f: json.dump(class_indices, f, indent=2, ensure_ascii=False)
+print("🗂️ class_indices:", class_indices)
 
-# 🧱 CNN 模型（強化版）
-model = Sequential([
-    Conv2D(32, (3,3), activation='relu', input_shape=(img_size[0], img_size[1], 3)),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
+# ============== 模型（VGG16 從零開始） ==============
+base = VGG16(include_top=False, weights=None, input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3))
+for l in base.layers:
+    l.trainable = True  # 從零訓練，全部可訓
 
-    Conv2D(64, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
+x = base.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(256, activation="relu", dtype="float32")(x)  # head 用 float32 更穩
+x = Dropout(0.35)(x)
+out = Dense(1, activation="sigmoid", dtype="float32")(x)
 
-    Conv2D(128, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
+model = Model(inputs=base.input, outputs=out)
 
-    Flatten(),
-    Dense(256, activation='relu'),
-    Dropout(0.2),
-    Dense(1, activation='sigmoid')
-])
+# AdamW + weight decay，學習率適中；配合 ReduceLROnPlateau
+opt = AdamW(learning_rate=1e-3, weight_decay=1e-4)
+model.compile(optimizer=opt, loss="binary_crossentropy", metrics=["accuracy"])
 
-# ⚙ 編譯模型
-model.compile(
-    optimizer=Adam(learning_rate=1e-5),
-    loss='binary_crossentropy',
-    metrics=['accuracy']
-)
+model.summary()
 
-# ⏱️ 訓練
-callbacks = [
-    EarlyStopping(patience=8, restore_best_weights=True),
-    ModelCheckpoint("model/catdog_model.h5", save_best_only=True)
+# ============== Callbacks ==============
+cbs = [
+    ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=5, min_lr=1e-6, verbose=1),
+    EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True, verbose=1),
+    ModelCheckpoint(BEST_PATH, monitor="val_accuracy", save_best_only=True, verbose=1)
 ]
 
-os.makedirs("model", exist_ok=True)
+# ============== 訓練 ==============
+history = model.fit(train_ds, epochs=EPOCHS, validation_data=val_ds, callbacks=cbs)
 
-model.fit(
-    train_gen,
-    epochs=50,
-    validation_data=val_gen,
-    callbacks=callbacks
-)
+# 另存最終
+model.save(os.path.join(MODEL_DIR, "catdog_model.h5"))
 
-# 儲存模型
-model.save("model/catdog_model.h5")
+# ============== 評估 & 匯出 misclassified ==============
+print("\n===== 評估與錯誤樣本匯出 =====")
+best = load_model(BEST_PATH)
 
-
-
-
-
-
-
-
-
-
-
-"""import os
-import json
-import tensorflow as tf
+# 方便用 dataset 的檔路徑：再建一份  batch=1 的驗證/訓練 generator（只做推論）
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
-from tensorflow.keras.optimizers import Adam
+eval_datagen = ImageDataGenerator(preprocessing_function=lambda x: preprocess_input(x, mode="caffe"))
 
-# 資料路徑
-train_dir = 'file/kaggle_cats_vs_dogs_f/train'
-val_dir = 'file/kaggle_cats_vs_dogs_f/val'
-os.makedirs('model', exist_ok=True)
+def dump_mis(dataset_name, root_dir):
+    gen = eval_datagen.flow_from_directory(
+        root_dir, target_size=IMG_SIZE, batch_size=1,
+        class_mode='binary', shuffle=False
+    )
+    total = len(gen.filepaths)
+    probs = best.predict(gen, verbose=1)
+    preds = (probs > 0.5).astype(int).flatten()
+    trues = gen.classes
+    paths = gen.filepaths
 
-img_size = (128, 128)
-batch_size = 32
+    # 建立輸出資料夾
+    dest = os.path.join(MIS_DIR, dataset_name)
+    if os.path.exists(dest): shutil.rmtree(dest)
+    os.makedirs(dest, exist_ok=True)
+    for name in class_names: os.makedirs(os.path.join(dest, name), exist_ok=True)
 
-# 只做 rescale，不加重 augmentation
-train_datagen = ImageDataGenerator(rescale=1./255)
-val_datagen = ImageDataGenerator(rescale=1./255)
+    wrong = 0
+    for i, (t, p) in enumerate(zip(trues, preds)):
+        if int(t) != int(p):
+            src = paths[i]; fname = os.path.basename(src)
+            true_name = class_names[int(t)]
+            shutil.copy(src, os.path.join(dest, true_name, f"wrong_pred_{fname}"))
+            wrong += 1
 
-train_gen = train_datagen.flow_from_directory(
-    train_dir,
-    target_size=img_size,
-    batch_size=batch_size,
-    class_mode='binary'
-)
-val_gen = val_datagen.flow_from_directory(
-    val_dir,
-    target_size=img_size,
-    batch_size=batch_size,
-    class_mode='binary',
-    shuffle=False
-)
+    acc = (1 - wrong / total) * 100 if total else 0.0
+    print(f"✅ {dataset_name}: {total} 張，錯 {wrong}，準確率 {acc:.2f}%")
 
-# 儲存 class_indices
-with open('model/class_indices.json', 'w') as f:
-    json.dump(train_gen.class_indices, f)
+for name, path in {"train": TRAIN_DIR, "val": VAL_DIR}.items():
+    dump_mis(name, path)
 
-# 模型結構（容量大、容易 overfit）
-model = Sequential([
-    Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
-
-    Conv2D(64, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
-
-    Conv2D(128, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
-
-    Conv2D(256, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
-
-    Conv2D(512, (3,3), activation='relu'),
-    BatchNormalization(),
-    MaxPooling2D(2,2),
-
-    Flatten(),
-    Dense(512, activation='relu'),
-    Dropout(0.4),
-    Dense(256, activation='relu'),
-    Dense(1, activation='sigmoid')
-])
-
-model.compile(
-    loss='binary_crossentropy',
-    optimizer=Adam(learning_rate=1e-3),  # 稍微大一點
-    metrics=['accuracy']
-)
-
-# 訓練（不 early stop，讓它完全記住）
-model.fit(
-    train_gen,
-    epochs=30,  # 讓它有足夠時間 overfit
-    validation_data=val_gen
-)
-
-# 儲存模型
-model.save('model/catdog_model.h5')
-"""
+print("\n📂 misclassified_vgg16_scratch 目錄：")
+for root, dirs, files in os.walk(MIS_DIR):
+    level = root.replace(MIS_DIR, "").count(os.sep)
+    indent = "  " * level
+    print(f"{indent}📁 {os.path.basename(root)}/")
+    for f in files:
+        print(f"{indent}  ├─ {f}")
